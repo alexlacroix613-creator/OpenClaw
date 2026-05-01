@@ -29,7 +29,16 @@ struct PetBootstrapRequest: Codable {
 }
 
 final class PetAPI {
-    private let baseURL = URL(string: "http://127.0.0.1:8787")!
+    // Local dev backend. 8989 was chosen because :8787 and :8788 were
+    // already taken on this machine. Override per-build via Info.plist
+    // OPENCLAW_API_BASE_URL if you want to point at a remote server.
+    private let baseURL: URL = {
+        if let override = Bundle.main.object(forInfoDictionaryKey: "OPENCLAW_API_BASE_URL") as? String,
+           let url = URL(string: override) {
+            return url
+        }
+        return URL(string: "http://127.0.0.1:8989")!
+    }()
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()

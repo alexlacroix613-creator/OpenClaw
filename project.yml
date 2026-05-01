@@ -6,6 +6,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: 5.9
+    CODE_SIGN_STYLE: Automatic
 targets:
   OpenClawApp:
     type: application
@@ -15,8 +16,30 @@ targets:
       - ios/Shared
     info:
       path: ios/OpenClawApp/Info.plist
+      properties:
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSMicrophoneUsageDescription: "Teach it your first sound. Your pet starts with no mapped human language; let it hear the sounds you want to teach."
+        NSSpeechRecognitionUsageDescription: "Help it understand the sound. Speech recognition turns the sounds you make into the fragments your pet repeats back."
+        UIBackgroundModes:
+          - audio
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            localhost:
+              NSExceptionAllowsInsecureHTTPLoads: true
+              NSIncludesSubdomains: true
+            "127.0.0.1":
+              NSExceptionAllowsInsecureHTTPLoads: true
+        OPENCLAW_API_BASE_URL: "http://127.0.0.1:8989"
     entitlements:
       path: ios/OpenClawApp/OpenClawApp.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.openclaw.app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.app
@@ -34,8 +57,20 @@ targets:
       - ios/OpenClawBroadcastExtension
     info:
       path: ios/OpenClawBroadcastExtension/Info.plist
+      properties:
+        CFBundleName: "OpenClaw Broadcast"
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        CFBundlePackageType: "XPC!"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.broadcast-services-upload
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).SampleHandler"
+          RPBroadcastProcessMode: RPBroadcastProcessModeSampleBuffer
     entitlements:
       path: ios/OpenClawBroadcastExtension/OpenClawBroadcastExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.openclaw.app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.app.broadcast
@@ -49,8 +84,18 @@ targets:
       - ios/Shared
     info:
       path: ios/OpenClawWidgetExtension/Info.plist
+      properties:
+        CFBundleName: "OpenClaw Widget"
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        CFBundlePackageType: "XPC!"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
       path: ios/OpenClawWidgetExtension/OpenClawWidgetExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.openclaw.app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.app.widget
