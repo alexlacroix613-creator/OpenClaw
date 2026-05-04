@@ -7,6 +7,8 @@ final class PetViewModel: ObservableObject {
     @Published var lastBackendError: String?
     @Published var isBootstrapped = false
     @Published var isTeaching = false
+    @Published var hatchFlashUntil: Date?
+    @Published var tapPulseToken: Int = 0
 
     private let api = PetAPI()
     private let persistenceKey = "openclaw.petState.v1"
@@ -37,14 +39,19 @@ final class PetViewModel: ObservableObject {
     func handleTapPet() {
         if petState.stage == .egg {
             petState.stage = .hatchling
+            hatchFlashUntil = Date().addingTimeInterval(0.55)
+            Haptics.hatch()
             localReaction(animation: "hatch_blink", text: "pi...?", moodDelta: 0.02, bondDelta: 0.01)
         } else {
+            Haptics.tap()
+            tapPulseToken &+= 1
             localReaction(animation: "look_at_user", text: petState.stage == .hatchling ? "mii" : "", moodDelta: 0.01, bondDelta: 0.005)
         }
         Task { await sendEvent(type: "tap_pet", text: nil) }
     }
 
     func resolveCapsule(type: String) {
+        Haptics.eat()
         switch type {
         case "food":
             petState.hunger = (petState.hunger - 0.18).clamped01()
@@ -65,6 +72,7 @@ final class PetViewModel: ObservableObject {
     }
 
     func handleClawMiss() {
+        Haptics.miss()
         localReaction(animation: "claw_miss_sad_blink", text: "...", moodDelta: -0.01)
     }
 

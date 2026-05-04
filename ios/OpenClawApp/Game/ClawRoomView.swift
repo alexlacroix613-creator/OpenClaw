@@ -18,9 +18,13 @@ struct ClawRoomView: View {
                     PixelArt(sprite: .platform, scale: 6)
                         .position(x: geo.size.width / 2, y: geo.size.height * 0.78)
 
-                    PixelPetView(state: runtime.petState)
-                        .position(x: petAnchor.x, y: petAnchor.y)
-                        .onTapGesture { runtime.handleTapPet() }
+                    PixelPetView(
+                        state: runtime.petState,
+                        hatchFlashUntil: runtime.hatchFlashUntil,
+                        tapPulseToken: runtime.tapPulseToken
+                    )
+                    .position(x: petAnchor.x, y: petAnchor.y)
+                    .onTapGesture { runtime.handleTapPet() }
                 }
 
                 VStack(spacing: 0) {
@@ -58,12 +62,17 @@ struct ClawRoomView: View {
 
 private struct PixelPetView: View {
     let state: PetState
+    let hatchFlashUntil: Date?
+    let tapPulseToken: Int
+
     @State private var blinkVisible = false
+    @State private var pulseScale: CGFloat = 1.0
 
     var body: some View {
         let bodyColor = PixelPalette.Pet.pink
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+            let now = timeline.date
+            let t = now.timeIntervalSinceReferenceDate
             let bob = CGFloat(sin(t * 1.4)) * 3
             let breathing = 1.0 + sin(t * 1.0) * 0.025
 
@@ -71,15 +80,37 @@ private struct PixelPetView: View {
                 ? .egg
                 : (blinkVisible ? PixelSprite.petBlinking(bodyColor: bodyColor) : PixelSprite.pet(bodyColor: bodyColor))
 
-            PixelArt(sprite: sprite, scale: 5, dropShadow: true)
-                .scaleEffect(breathing)
-                .offset(y: bob)
-                .onChange(of: blinkTriggerKey(for: t)) { _, _ in
-                    blinkVisible = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.13) {
-                        blinkVisible = false
+            let flashing = hatchFlashUntil.map { now < $0 } ?? false
+            let flashAlpha: Double = flashing ? 0.85 : 0
+
+            ZStack {
+                PixelArt(sprite: sprite, scale: 5, dropShadow: true)
+                    .scaleEffect(breathing * pulseScale)
+                    .offset(y: bob)
+
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(width: 110, height: 110)
+                    .blendMode(.plusLighter)
+                    .opacity(flashAlpha)
+                    .allowsHitTesting(false)
+            }
+            .onChange(of: blinkTriggerKey(for: t)) { _, _ in
+                blinkVisible = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.13) {
+                    blinkVisible = false
+                }
+            }
+            .onChange(of: tapPulseToken) { _, _ in
+                withAnimation(.spring(response: 0.18, dampingFraction: 0.55)) {
+                    pulseScale = 1.10
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                    withAnimation(.spring(response: 0.22, dampingFraction: 0.7)) {
+                        pulseScale = 1.0
                     }
                 }
+            }
         }
     }
 
