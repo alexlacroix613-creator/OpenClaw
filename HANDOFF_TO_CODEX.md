@@ -10,7 +10,7 @@
 
 ## §-1. Current state — 2026-05-03 21:05 MDT
 
-**Branch:** `feat/local-dev-bringup` @ `3935ba4` (NOT pushed). 11 commits ahead of `01cd6dc` baseline.
+**Branch:** `feat/local-dev-bringup` @ `569d7f8` (NOT pushed). 14 commits ahead of `01cd6dc` baseline. `/loop 10x` ran to completion.
 
 **Build:** `** BUILD SUCCEEDED **` for iPhone 17 / iOS 26.5 simulator (Xcode 26.5 Beta 3, Metal Toolchain present but not required since the .metal shader was deleted in the pixel pivot).
 
@@ -29,6 +29,9 @@
 | 5    | `3928fb3` | Stage progression on teach: hatchling → learner; learner → toddler @ bond > 0.35; toddler → buddy @ bond > 0.65; buddy → bff @ bond > 0.85. Each promotion fires the same `hatchFlashUntil` + `Haptics.hatch()` celebration. |
 | 6    | `965660f` | Second-stage hint "tap a snack to feed". `firstFeedDone` flag persisted in UserDefaults. `OnboardingHint` was generalized into `HintPanel(text:anchor:glowAnchor:)`. |
 | 7    | `3935ba4` | `PixelSprite.clawClosed` (prongs converge). `ClawSpriteView` swaps closed sprite during `.grabbing/.returning/.delivering`. Spring scale-punch 1.0 → 1.18 on grab. |
+| 8    | `f760c9f` | Third tutorial hint "tap TEACH to grow it" gated on `firstFeedDone && !firstTeachDone`. `Snack.spawnReplacement` now picks a random different `Kind`. |
+| 9    | `1250126` | UX clarity for two complaints. Pet alerted state (1.06 scale + 8pt lift, spring) while claw is in motion. Snacks subtle scale-pulse. Teaching modal: visible X close button, lowercase header, clearer copy ("type any short sound. it will try to copy." + placeholder "e.g. mi  ba  woo"), OK disabled on empty input, `.submitLabel(.done)` for return key, scrim 0.18 → 0.35. |
+| 10   | `569d7f8` | Final audit pass. Egg speckles changed from apple-red to honey-tan (less spotty, more egg-like). Onboarding hint anchor moved up 30pt; snack-zone hint moved down 5% so panels don't overlap their targets. |
 
 ### How the user-facing flow looks now
 
