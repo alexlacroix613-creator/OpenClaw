@@ -9,6 +9,7 @@ final class PetViewModel: ObservableObject {
     @Published var isTeaching = false
     @Published var hatchFlashUntil: Date?
     @Published var tapPulseToken: Int = 0
+    @Published var eatSparkleUntil: Date?
 
     private let api = PetAPI()
     private let persistenceKey = "openclaw.petState.v1"
@@ -63,6 +64,7 @@ final class PetViewModel: ObservableObject {
 
     func resolveCapsule(type: String) {
         Haptics.eat()
+        eatSparkleUntil = Date().addingTimeInterval(0.6)
         switch type {
         case "food":
             petState.hunger = (petState.hunger - 0.18).clamped01()

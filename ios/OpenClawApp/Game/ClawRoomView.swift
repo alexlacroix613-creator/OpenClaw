@@ -43,6 +43,10 @@ struct ClawRoomView: View {
                     .padding(.bottom, 24)
                 }
 
+                if let until = runtime.eatSparkleUntil {
+                    EatSparkle(anchor: petAnchor, endTime: until)
+                }
+
                 if !runtime.petState.visibleText.isEmpty {
                     PixelSpeechBubble(text: runtime.petState.visibleText)
                         .position(x: petAnchor.x, y: petAnchor.y - 70)
@@ -63,6 +67,39 @@ struct ClawRoomView: View {
         .animation(.easeInOut(duration: 0.18), value: runtime.isTeaching)
         .animation(.easeInOut(duration: 0.20), value: runtime.petState.visibleText)
         .animation(.easeInOut(duration: 0.30), value: runtime.hasOnboarded)
+    }
+}
+
+private struct EatSparkle: View {
+    let anchor: CGPoint
+    let endTime: Date
+    private let totalDuration: Double = 0.6
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let now = timeline.date
+            let remaining = endTime.timeIntervalSince(now)
+            let progress = max(0, min(1, 1 - (remaining / totalDuration)))
+            let alive = remaining > 0
+
+            ZStack {
+                if alive {
+                    ForEach(0..<6, id: \.self) { i in
+                        let angle = Double(i) * (.pi * 2 / 6) + .pi / 6
+                        let distance = CGFloat(progress) * 38
+                        let dx = CGFloat(cos(angle)) * distance
+                        let dy = CGFloat(sin(angle)) * distance - 24
+                        Rectangle()
+                            .fill(Color.white)
+                            .frame(width: 6, height: 6)
+                            .overlay(Rectangle().stroke(PixelPalette.outline, lineWidth: 1))
+                            .position(x: anchor.x + dx, y: anchor.y + dy)
+                            .opacity(1 - progress)
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
