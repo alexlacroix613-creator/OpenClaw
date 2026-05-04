@@ -14,8 +14,10 @@ final class PetViewModel: ObservableObject {
     private let api = PetAPI()
     private let persistenceKey = "openclaw.petState.v1"
     private let onboardingKey = "openclaw.hasOnboarded.v1"
+    private let firstFeedKey = "openclaw.firstFeedDone.v1"
 
     @Published var hasOnboarded: Bool
+    @Published var firstFeedDone: Bool
 
     init() {
         if let data = UserDefaults.standard.data(forKey: persistenceKey),
@@ -25,12 +27,19 @@ final class PetViewModel: ObservableObject {
             self.petState = .newborn()
         }
         self.hasOnboarded = UserDefaults.standard.bool(forKey: onboardingKey)
+        self.firstFeedDone = UserDefaults.standard.bool(forKey: firstFeedKey)
     }
 
     func markOnboarded() {
         guard !hasOnboarded else { return }
         hasOnboarded = true
         UserDefaults.standard.set(true, forKey: onboardingKey)
+    }
+
+    func markFirstFeed() {
+        guard !firstFeedDone else { return }
+        firstFeedDone = true
+        UserDefaults.standard.set(true, forKey: firstFeedKey)
     }
 
     func bootstrapIfNeeded() async {
@@ -65,6 +74,7 @@ final class PetViewModel: ObservableObject {
     func resolveCapsule(type: String) {
         Haptics.eat()
         eatSparkleUntil = Date().addingTimeInterval(0.6)
+        markFirstFeed()
         switch type {
         case "food":
             petState.hunger = (petState.hunger - 0.18).clamped01()

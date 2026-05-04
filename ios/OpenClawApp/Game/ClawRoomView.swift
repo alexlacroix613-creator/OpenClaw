@@ -55,8 +55,23 @@ struct ClawRoomView: View {
                 }
 
                 if !runtime.hasOnboarded && runtime.petState.stage == .egg {
-                    OnboardingHint(petAnchor: petAnchor)
-                        .transition(.opacity)
+                    HintPanel(
+                        text: "tap the egg",
+                        anchor: CGPoint(x: petAnchor.x, y: petAnchor.y - 30),
+                        glowAnchor: petAnchor
+                    )
+                    .transition(.opacity)
+                }
+
+                if runtime.hasOnboarded
+                    && !runtime.firstFeedDone
+                    && runtime.petState.stage != .egg {
+                    HintPanel(
+                        text: "tap a snack to feed",
+                        anchor: CGPoint(x: geo.size.width / 2, y: geo.size.height * 0.50),
+                        glowAnchor: nil
+                    )
+                    .transition(.opacity)
                 }
 
                 if runtime.isTeaching {
@@ -68,6 +83,7 @@ struct ClawRoomView: View {
         .animation(.easeInOut(duration: 0.18), value: runtime.isTeaching)
         .animation(.easeInOut(duration: 0.20), value: runtime.petState.visibleText)
         .animation(.easeInOut(duration: 0.30), value: runtime.hasOnboarded)
+        .animation(.easeInOut(duration: 0.30), value: runtime.firstFeedDone)
     }
 }
 
@@ -104,24 +120,27 @@ private struct EatSparkle: View {
     }
 }
 
-private struct OnboardingHint: View {
-    let petAnchor: CGPoint
-    @State private var pulse: Double = 0
+private struct HintPanel: View {
+    let text: String
+    let anchor: CGPoint
+    let glowAnchor: CGPoint?
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             let glow = (sin(t * 1.6) + 1) / 2
             ZStack {
-                Circle()
-                    .fill(PixelPalette.Cloud.fill)
-                    .frame(width: 96 + glow * 24, height: 96 + glow * 24)
-                    .blur(radius: 8)
-                    .opacity(0.45 + glow * 0.20)
-                    .position(x: petAnchor.x, y: petAnchor.y)
-                    .allowsHitTesting(false)
+                if let glowAnchor {
+                    Circle()
+                        .fill(PixelPalette.Cloud.fill)
+                        .frame(width: 96 + glow * 24, height: 96 + glow * 24)
+                        .blur(radius: 8)
+                        .opacity(0.45 + glow * 0.20)
+                        .position(x: glowAnchor.x, y: glowAnchor.y)
+                        .allowsHitTesting(false)
+                }
 
-                Text("tap the egg")
+                Text(text)
                     .font(.system(size: 14, weight: .black, design: .rounded))
                     .tracking(1.4)
                     .foregroundStyle(PixelPalette.outline)
@@ -133,7 +152,7 @@ private struct OnboardingHint: View {
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(PixelPalette.outline, lineWidth: 2))
                     )
                     .shadow(color: PixelPalette.outlineSoft, radius: 0, x: 2, y: 2)
-                    .position(x: petAnchor.x, y: petAnchor.y - 110)
+                    .position(x: anchor.x, y: anchor.y - 80)
                     .opacity(0.85 + glow * 0.15)
                     .allowsHitTesting(false)
             }
