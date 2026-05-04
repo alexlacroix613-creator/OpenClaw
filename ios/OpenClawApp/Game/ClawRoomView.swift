@@ -49,6 +49,11 @@ struct ClawRoomView: View {
                         .transition(.opacity)
                 }
 
+                if !runtime.hasOnboarded && runtime.petState.stage == .egg {
+                    OnboardingHint(petAnchor: petAnchor)
+                        .transition(.opacity)
+                }
+
                 if runtime.isTeaching {
                     PixelTeachingPanel(teachingText: $teachingText, runtime: runtime)
                         .transition(.opacity)
@@ -57,6 +62,44 @@ struct ClawRoomView: View {
         }
         .animation(.easeInOut(duration: 0.18), value: runtime.isTeaching)
         .animation(.easeInOut(duration: 0.20), value: runtime.petState.visibleText)
+        .animation(.easeInOut(duration: 0.30), value: runtime.hasOnboarded)
+    }
+}
+
+private struct OnboardingHint: View {
+    let petAnchor: CGPoint
+    @State private var pulse: Double = 0
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let glow = (sin(t * 1.6) + 1) / 2
+            ZStack {
+                Circle()
+                    .fill(PixelPalette.Cloud.fill)
+                    .frame(width: 96 + glow * 24, height: 96 + glow * 24)
+                    .blur(radius: 8)
+                    .opacity(0.45 + glow * 0.20)
+                    .position(x: petAnchor.x, y: petAnchor.y)
+                    .allowsHitTesting(false)
+
+                Text("tap the egg")
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .tracking(1.4)
+                    .foregroundStyle(PixelPalette.outline)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(PixelPalette.Panel.fill)
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(PixelPalette.outline, lineWidth: 2))
+                    )
+                    .shadow(color: PixelPalette.outlineSoft, radius: 0, x: 2, y: 2)
+                    .position(x: petAnchor.x, y: petAnchor.y - 110)
+                    .opacity(0.85 + glow * 0.15)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }
 

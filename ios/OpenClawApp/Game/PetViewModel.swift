@@ -12,6 +12,9 @@ final class PetViewModel: ObservableObject {
 
     private let api = PetAPI()
     private let persistenceKey = "openclaw.petState.v1"
+    private let onboardingKey = "openclaw.hasOnboarded.v1"
+
+    @Published var hasOnboarded: Bool
 
     init() {
         if let data = UserDefaults.standard.data(forKey: persistenceKey),
@@ -20,6 +23,13 @@ final class PetViewModel: ObservableObject {
         } else {
             self.petState = .newborn()
         }
+        self.hasOnboarded = UserDefaults.standard.bool(forKey: onboardingKey)
+    }
+
+    func markOnboarded() {
+        guard !hasOnboarded else { return }
+        hasOnboarded = true
+        UserDefaults.standard.set(true, forKey: onboardingKey)
     }
 
     func bootstrapIfNeeded() async {
@@ -37,6 +47,7 @@ final class PetViewModel: ObservableObject {
     }
 
     func handleTapPet() {
+        markOnboarded()
         if petState.stage == .egg {
             petState.stage = .hatchling
             hatchFlashUntil = Date().addingTimeInterval(0.55)
