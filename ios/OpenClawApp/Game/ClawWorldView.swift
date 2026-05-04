@@ -217,12 +217,27 @@ private struct ClawSpriteView: View {
             }
         }()
 
+        let isClosed: Bool = {
+            switch state {
+            case .grabbing, .returning, .delivering: return true
+            default: return false
+            }
+        }()
+        let clawSprite: PixelSprite = isClosed ? .clawClosed : .claw
+
+        let punchScale: CGFloat = {
+            if case .grabbing = state { return 1.18 }
+            return 1.0
+        }()
+
         ZStack {
             ClawCableShape(topY: topY, clawY: clawPoint.y, x: clawPoint.x)
                 .stroke(PixelPalette.outline, style: StrokeStyle(lineWidth: 2, lineCap: .square, dash: [4, 2]))
                 .animation(anim, value: clawPoint)
 
-            PixelArt(sprite: PixelSprite.claw, scale: 4, dropShadow: true)
+            PixelArt(sprite: clawSprite, scale: 4, dropShadow: true)
+                .scaleEffect(punchScale)
+                .animation(.spring(response: 0.18, dampingFraction: 0.55), value: punchScale)
                 .position(x: clawPoint.x, y: clawPoint.y)
                 .animation(anim, value: clawPoint)
 
@@ -266,6 +281,25 @@ extension PixelSprite {
             "ooo.....ooo",
             "..oo...oo..",
             "...o...o..."
+        ]
+        let palette: [Character: Color] = [
+            "o": PixelPalette.outline,
+            "W": .white
+        ]
+        return PixelSprite(rows: rows, palette: palette)
+    }()
+
+    static let clawClosed: PixelSprite = {
+        let rows = [
+            "ooooooooooo",
+            "oWWWWWWWWWo",
+            "oWWWoooWWWo",
+            "oWWoWWWoWWo",
+            "oWoWWWWWoWo",
+            "oWoooooooWo",
+            "ooooooooooo",
+            "..ooooooo..",
+            "....ooo...."
         ]
         let palette: [Character: Color] = [
             "o": PixelPalette.outline,
