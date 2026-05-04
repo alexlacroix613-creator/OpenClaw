@@ -59,6 +59,7 @@ targets:
       path: ios/OpenClawBroadcastExtension/Info.plist
       properties:
         CFBundleName: "OpenClaw Broadcast"
+        CFBundleDisplayName: "OpenClaw Broadcast"
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         CFBundlePackageType: "XPC!"
@@ -86,6 +87,7 @@ targets:
       path: ios/OpenClawWidgetExtension/Info.plist
       properties:
         CFBundleName: "OpenClaw Widget"
+        CFBundleDisplayName: "OpenClaw Widget"
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         CFBundlePackageType: "XPC!"

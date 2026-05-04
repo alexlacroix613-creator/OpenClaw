@@ -31,6 +31,10 @@ final class SpeechRecognizer: ObservableObject {
         request.shouldReportPartialResults = true
         self.request = request
 
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker])
+        try session.setActive(true, options: .notifyOthersOnDeactivation)
+
         let input = audioEngine.inputNode
         let format = input.outputFormat(forBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
