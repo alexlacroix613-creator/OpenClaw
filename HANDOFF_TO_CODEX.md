@@ -4,6 +4,33 @@
 > Do not trust prior commit messages or README enthusiasm. This document is the source of truth.
 > Goal of this handoff: state honestly what exists, what doesn't, what's wrong, and what "good" looks like — so you can ship a build the user is willing to put in front of someone.
 
+> **Visual direction was changed 2026-05-03 evening.** OpenClaw is now a **pastel pixel toy-world** virtual pet game (chibi creatures, dark purple/navy outlines, chunky pixel UI panels, soft clouds, geometric trees, floating snack capsules). The earlier "cyber-Y2K / Frutiger Aero" direction is dead — see §0a and `docs/ART_DIRECTION.md`. Where this handoff still references "Aero" or "glass" below, treat it as legacy context for the pivot, not a target.
+
+---
+
+## 0a. Art direction (CURRENT — read this first)
+
+OpenClaw is a **pastel pixel toy-world** virtual pet game. Spec lives in `docs/ART_DIRECTION.md`. Summary:
+
+- **Visual reference:** cute pixel chibi creatures, big heads / tiny bodies / short limbs, dark purple/navy pixel outlines, large square eyes, simple tiny mouths, pastel sky+platform world, floating snacks/items, chunky pixel UI panels, soft clouds, simple geometric trees and platforms.
+- **NOT:** realistic 3D, dark cyberpunk, generic chatbot, finance/crypto, sterile iOS utility.
+- **Creature system v1:** 8 base species max (`orb`, `kit`, `cub`, `axo`, `pup`, `chick`, `slime`, `shade`), 4 rig families (orb/blob, cat/bunny, bear/koala, axolotl/dragon/charm). Modular trait slots: body / ears-horns-fins / eyes / chest emblem / skin material / accessory / mutation overlay. Rarity is cosmetic only (common → secret form). **No crypto, no marketplace, no financialized rarity language. Common pets must feel lovable and fully useful.**
+- **Banned legacy terms:** `cyber-Y2K`, `Frutiger Aero`, `glass terrarium`, `aurora`, `glass egg`. Use "pastel pixel toy-world", "platform habitat", "pixel egg" / "chibi egg".
+
+The pixel-art layer that ships in this commit:
+- `ios/OpenClawApp/Rendering/PixelPalette.swift` — every color token from `docs/ART_DIRECTION.md` §4.
+- `ios/OpenClawApp/Rendering/PixelArt.swift` — `PixelSprite` + `PixelArt` Canvas-based renderer + sprite library (pet idle / blink / happy, egg, clouds, tree, platform, snacks: apple/honey/leaf/berry/shell/mystery).
+- `ios/OpenClawApp/Rendering/PixelHabitat.swift` — pastel sky gradient + drifting clouds + parallax trees.
+- `ios/OpenClawApp/Game/Species.swift` — Species + RigFamily + trait enums + `PetTraits.firstHatchling`. Currently only the `orb` species sprite is fully drawn; the other 7 species share that sprite as a placeholder until rig-specific sprites are authored.
+- `ios/OpenClawApp/Game/ClawRoomView.swift` — rewritten to compose `PixelHabitat` + platform + chibi pet + chunky pixel HUD (DROP / TEACH / FEED) + pixel slider + pixel teaching modal.
+- `ios/OpenClawApp/Game/ClawMachineScene.swift` — repainted: capsules are `SKSpriteNode`s rendered from `PixelSprite` rasterizations (snacks), claw is a chunky pixel sprite, cable is a 2px hard-stroked path with a pixel-stitched look, scene background is fully transparent so it sits over `PixelHabitat`.
+
+Files removed (backed up to `.backup/2026-05-03-pixel-pivot/`):
+- `ios/OpenClawApp/Rendering/AeroBackdrop.swift`
+- `ios/OpenClawApp/Rendering/AeroGlassShader.metal`
+
+The Metal Toolchain is no longer required by the build because there is no `.metal` source. You can keep it installed (it's already on disk) but a fresh checkout doesn't need it.
+
 ---
 
 ## 0. Truth-in-advertising — read first
@@ -113,8 +140,9 @@ xcrun simctl launch booted com.openclaw.app
 | `Game/ClawRoomView.swift` | Main composed screen | Contains `PetStatusBar`, `PetAvatarView`, `ClawMachineView`, slider+DROP, optional `teachingPanel`. The teaching panel is only mounted when `runtime.isTeaching` is true, which only flips when a "word" capsule is grabbed — meaning the user has no obvious way to teach a sound on first launch. |
 | `Game/ClawMachineView.swift` | `UIViewRepresentable` wrapping `SKView` | Trivial bridge. Scene is constructed once in `ClawRoomView` body — that's a SwiftUI smell (recreated on every view init). |
 | `Game/ClawMachineScene.swift` | `SKScene` + claw + 14 capsules | Capsules are `SKShapeNode` ellipses with a label glyph. Physics with gravity = -5.2. |
-| `Rendering/AeroBackdrop.swift` | Frutiger Aero gradient + blurry orbs + `PixelCharmGrid` | This is the only place "Aero" exists in code. No glass bevel, no chrome, no animated sheen. |
-| `Rendering/AeroGlassShader.metal` | Stitchable Metal layer effect | **Compiled but never used.** No `.layerEffect(...)` call references it. |
+| `Rendering/PixelPalette.swift` | Color tokens for the pastel pixel toy-world | Every Color the app uses. Mirror of `docs/ART_DIRECTION.md` §4. |
+| `Rendering/PixelArt.swift` | `PixelSprite` data + `PixelArt` Canvas renderer + sprite library | Pet (idle/blink/happy), egg, clouds, tree, platform, snacks (apple/honey/leaf/berry/shell/mystery). |
+| `Rendering/PixelHabitat.swift` | Pastel sky + drifting clouds + parallax trees backdrop | Replaces the old `AeroBackdrop`. |
 | `Speech/SpeechRecognizer.swift` | `SFSpeechRecognizer` + `AVAudioEngine` | Now configures `AVAudioSession(.playAndRecord, mode: .measurement)` before start (this session's fix). Not yet wired into `ClawRoomView`. |
 | `Speech/PetSpeechSynthesizer.swift` | `AVSpeechSynthesizer` wrapper | Not yet invoked. |
 | `API/PetAPI.swift` | Async POST client | Reads `OPENCLAW_API_BASE_URL` from Info.plist (defaults to `http://127.0.0.1:8989`). Sends `X-Install-Token` header from `DeviceIdentity.installToken` (UUID, persisted in UserDefaults). |

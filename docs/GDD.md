@@ -8,7 +8,7 @@ The user never configures AI. Model routing, keys, fallback behavior, memory sto
 
 ## Core Fantasy
 
-A translucent cyber-Y2K creature wakes inside a glossy digital claw-machine terrarium. It does not understand human language yet. The user teaches it sounds, names, objects, feelings, rituals, and eventually shared meaning.
+A chibi pixel creature wakes on a pastel floating platform in a cozy toy-world. It does not understand human language yet. The user teaches it sounds, names, objects, feelings, rituals, and eventually shared meaning. Visual direction is locked in `docs/ART_DIRECTION.md` — pastel pixel toy-world, big-headed chibi pets, dark purple/navy outlines, chunky pixel UI.
 
 ## Design Pillars
 

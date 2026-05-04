@@ -1,21 +1,34 @@
 import SpriteKit
+import SwiftUI
+import UIKit
 
 final class ClawMachineScene: SKScene, SKPhysicsContactDelegate {
-    private let claw = SKShapeNode()
+    private let claw = SKNode()
     private let cable = SKShapeNode()
     private var isDropping = false
     private var capsulesSpawned = false
 
+    private let snackTypes = ["apple", "leaf", "honey", "berry", "shell", "mystery"]
+
     override func didMove(to view: SKView) {
         backgroundColor = .clear
-        physicsWorld.gravity = CGVector(dx: 0, dy: -5.2)
+        view.allowsTransparency = true
+        physicsWorld.gravity = CGVector(dx: 0, dy: -1.6)
         physicsWorld.contactDelegate = self
         setupBounds()
         setupClaw()
-        if !capsulesSpawned {
-            spawnCapsules()
-            capsulesSpawned = true
-        }
+        spawnIfReady()
+    }
+
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        spawnIfReady()
+    }
+
+    private func spawnIfReady() {
+        guard !capsulesSpawned, view != nil, size.width > 200, size.height > 200 else { return }
+        spawnSnacks()
+        capsulesSpawned = true
     }
 
     private func setupBounds() {
@@ -23,81 +36,71 @@ final class ClawMachineScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func setupClaw() {
-        claw.path = CGPath(roundedRect: CGRect(x: -34, y: -18, width: 68, height: 36), cornerWidth: 18, cornerHeight: 18, transform: nil)
-        claw.fillColor = SKColor.white.withAlphaComponent(0.42)
-        claw.strokeColor = SKColor.white.withAlphaComponent(0.9)
-        claw.lineWidth = 3
-        claw.position = CGPoint(x: size.width / 2, y: size.height - 92)
-        claw.zPosition = 20
+        let texture = ClawMachineScene.clawTexture(in: view!)
+        let sprite = SKSpriteNode(texture: texture)
+        sprite.setScale(2.6)
+        sprite.zPosition = 30
+        claw.addChild(sprite)
+        claw.position = CGPoint(x: size.width / 2, y: size.height - 56)
         addChild(claw)
 
-        cable.strokeColor = SKColor.white.withAlphaComponent(0.45)
-        cable.lineWidth = 3
-        cable.zPosition = 19
+        cable.strokeColor = PixelUIColor.outline
+        cable.fillColor = .clear
+        cable.lineWidth = 2
+        cable.lineCap = .square
+        cable.lineJoin = .miter
+        cable.zPosition = 28
+        cable.isAntialiased = false
         addChild(cable)
         redrawCable()
     }
 
     private func redrawCable() {
         let path = CGMutablePath()
-        path.move(to: CGPoint(x: claw.position.x, y: size.height))
-        path.addLine(to: claw.position)
+        let topY = size.height + 8
+        let cx = claw.position.x
+        path.move(to: CGPoint(x: cx, y: topY))
+        var y = topY
+        while y > claw.position.y + 14 {
+            y -= 8
+            path.addLine(to: CGPoint(x: cx, y: y))
+        }
         cable.path = path
     }
 
-    private func spawnCapsules() {
-        let types = ["food", "toy", "word", "memory", "outfit"]
-        for index in 0..<14 {
-            let type = types[index % types.count]
-            let node = makeCapsule(type: type)
+    private func spawnSnacks() {
+        let inset: CGFloat = 60
+        let xLow = min(size.width - inset, inset)
+        let xHigh = max(size.width - inset, inset)
+        let yLow = size.height * 0.55 - 90
+        let yHigh = size.height * 0.55 + 60
+        for index in 0..<8 {
+            let type = snackTypes[index % snackTypes.count]
+            let node = makeSnack(type: type)
             node.position = CGPoint(
-                x: CGFloat.random(in: 50...(size.width - 50)),
-                y: CGFloat.random(in: 80...(size.height * 0.48))
+                x: xLow == xHigh ? xLow : CGFloat.random(in: xLow...xHigh),
+                y: yLow == yHigh ? yLow : CGFloat.random(in: yLow...yHigh)
             )
             addChild(node)
+
+            let drift = SKAction.sequence([
+                .moveBy(x: CGFloat.random(in: -10...10), y: 6, duration: 1.4),
+                .moveBy(x: CGFloat.random(in: -10...10), y: -6, duration: 1.4)
+            ])
+            node.run(.repeatForever(drift))
         }
     }
 
-    private func makeCapsule(type: String) -> SKShapeNode {
-        let node = SKShapeNode(ellipseOf: CGSize(width: 54, height: 54))
+    private func makeSnack(type: String) -> SKSpriteNode {
+        let texture = ClawMachineScene.snackTexture(for: type, in: view!)
+        let node = SKSpriteNode(texture: texture)
         node.name = "capsule:\(type)"
-        node.fillColor = color(for: type).withAlphaComponent(0.78)
-        node.strokeColor = SKColor.white.withAlphaComponent(0.85)
-        node.lineWidth = 3
-        node.physicsBody = SKPhysicsBody(circleOfRadius: 27)
-        node.physicsBody?.restitution = 0.55
-        node.physicsBody?.friction = 0.35
-        node.physicsBody?.linearDamping = 0.55
-
-        let label = SKLabelNode(text: symbol(for: type))
-        label.fontSize = 20
-        label.verticalAlignmentMode = .center
-        label.horizontalAlignmentMode = .center
-        label.zPosition = 2
-        node.addChild(label)
+        node.setScale(2.6)
+        node.zPosition = 10
+        node.physicsBody = SKPhysicsBody(circleOfRadius: 22)
+        node.physicsBody?.affectedByGravity = false
+        node.physicsBody?.linearDamping = 0.9
         return node
-    }
-
-    private func color(for type: String) -> SKColor {
-        switch type {
-        case "food": return .systemGreen
-        case "toy": return .systemPink
-        case "word": return .systemCyan
-        case "memory": return .systemPurple
-        case "outfit": return .systemYellow
-        default: return .white
-        }
-    }
-
-    private func symbol(for type: String) -> String {
-        switch type {
-        case "food": return "◍"
-        case "toy": return "✧"
-        case "word": return "Aa"
-        case "memory": return "∞"
-        case "outfit": return "◆"
-        default: return "?"
-        }
     }
 
     func moveClaw(to normalizedX: CGFloat) {
@@ -112,11 +115,11 @@ final class ClawMachineScene: SKScene, SKPhysicsContactDelegate {
         guard !isDropping else { return }
         isDropping = true
 
-        let startY = size.height - 92
+        let startY = size.height - 56
         let down = SKAction.customAction(withDuration: 0.62) { [weak self] node, elapsed in
             guard let self else { return }
             let progress = elapsed / 0.62
-            node.position.y = startY - (self.size.height * 0.50 * progress)
+            node.position.y = startY - (self.size.height * 0.42 * progress)
             self.redrawCable()
         }
 
@@ -140,12 +143,12 @@ final class ClawMachineScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func attemptGrab() {
-        let candidates = children.compactMap { node -> SKShapeNode? in
-            guard let shape = node as? SKShapeNode,
-                  shape.name?.hasPrefix("capsule:") == true else { return nil }
-            let dx = shape.position.x - claw.position.x
-            let dy = shape.position.y - claw.position.y
-            return sqrt(dx * dx + dy * dy) < 74 ? shape : nil
+        let candidates = children.compactMap { node -> SKSpriteNode? in
+            guard let sprite = node as? SKSpriteNode,
+                  sprite.name?.hasPrefix("capsule:") == true else { return nil }
+            let dx = sprite.position.x - claw.position.x
+            let dy = sprite.position.y - claw.position.y
+            return sqrt(dx * dx + dy * dy) < 60 ? sprite : nil
         }
 
         guard let prize = candidates.first else {
@@ -155,13 +158,31 @@ final class ClawMachineScene: SKScene, SKPhysicsContactDelegate {
 
         let type = prize.name?.replacingOccurrences(of: "capsule:", with: "") ?? "unknown"
         prize.removeFromParent()
-        NotificationCenter.default.post(name: .clawGrabbedCapsule, object: type)
+        let mappedReward = ClawMachineScene.rewardCategory(for: type)
+        NotificationCenter.default.post(name: .clawGrabbedCapsule, object: mappedReward)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             guard let self else { return }
-            let replacement = self.makeCapsule(type: type)
-            replacement.position = CGPoint(x: CGFloat.random(in: 50...(self.size.width - 50)), y: 80)
+            let replacement = self.makeSnack(type: type)
+            let xLow = min(self.size.width - 60, 60)
+            let xHigh = max(self.size.width - 60, 60)
+            let yLow = self.size.height * 0.55 - 90
+            let yHigh = self.size.height * 0.55 + 60
+            replacement.position = CGPoint(
+                x: xLow == xHigh ? xLow : CGFloat.random(in: xLow...xHigh),
+                y: yLow == yHigh ? yLow : CGFloat.random(in: yLow...yHigh)
+            )
             self.addChild(replacement)
+        }
+    }
+
+    private static func rewardCategory(for snackType: String) -> String {
+        switch snackType {
+        case "apple", "honey", "shell": return "food"
+        case "leaf":                    return "toy"
+        case "berry":                   return "outfit"
+        case "mystery":                 return "memory"
+        default:                        return "food"
         }
     }
 }
@@ -169,4 +190,100 @@ final class ClawMachineScene: SKScene, SKPhysicsContactDelegate {
 extension Notification.Name {
     static let clawMissed = Notification.Name("OpenClaw.clawMissed")
     static let clawGrabbedCapsule = Notification.Name("OpenClaw.clawGrabbedCapsule")
+}
+
+private enum PixelUIColor {
+    static let outline = UIColor(red: 0x2A/255.0, green: 0x1B/255.0, blue: 0x4D/255.0, alpha: 1.0)
+}
+
+private extension ClawMachineScene {
+    static func snackTexture(for type: String, in view: SKView) -> SKTexture {
+        let sprite: PixelSprite
+        switch type {
+        case "apple":   sprite = .snackApple
+        case "honey":   sprite = .snackHoney
+        case "leaf":    sprite = .snackLeaf
+        case "berry":   sprite = .snackBerry
+        case "shell":   sprite = .snackShell
+        case "mystery": sprite = .snackMystery
+        default:        sprite = .snackApple
+        }
+        let texture = renderToTexture(sprite: sprite, pixelSize: 2)
+        texture.filteringMode = .nearest
+        return texture
+    }
+
+    static func clawTexture(in view: SKView) -> SKTexture {
+        let rows = [
+            "ooooooooooo",
+            "oWWWWWWWWWo",
+            "oWWWoooWWWo",
+            "oWWoWWWoWWo",
+            "oWoWWWWWoWo",
+            "oWoooooooWo",
+            "ooo.....ooo",
+            "..oo...oo..",
+            "...o...o..."
+        ]
+        let palette: [Character: UIColor] = [
+            "o": PixelUIColor.outline,
+            "W": .white
+        ]
+        let texture = renderToTextureUI(rows: rows, palette: palette, pixelSize: 4)
+        texture.filteringMode = .nearest
+        return texture
+    }
+
+    static func renderToTexture(sprite: PixelSprite, pixelSize: CGFloat) -> SKTexture {
+        let width = CGFloat(sprite.width) * pixelSize
+        let height = CGFloat(sprite.height) * pixelSize
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+        let image = renderer.image { ctx in
+            let cg = ctx.cgContext
+            cg.interpolationQuality = .none
+            cg.setShouldAntialias(false)
+            for (rowIndex, row) in sprite.rows.enumerated() {
+                for (colIndex, character) in row.enumerated() {
+                    guard character != "." else { continue }
+                    guard let swiftColor = sprite.palette[character] else { continue }
+                    let uiColor = UIColor(swiftColor)
+                    cg.setFillColor(uiColor.cgColor)
+                    let rect = CGRect(
+                        x: CGFloat(colIndex) * pixelSize,
+                        y: CGFloat(rowIndex) * pixelSize,
+                        width: pixelSize,
+                        height: pixelSize
+                    )
+                    cg.fill(rect)
+                }
+            }
+        }
+        return SKTexture(image: image)
+    }
+
+    static func renderToTextureUI(rows: [String], palette: [Character: UIColor], pixelSize: CGFloat) -> SKTexture {
+        let width = CGFloat(rows.first?.count ?? 0) * pixelSize
+        let height = CGFloat(rows.count) * pixelSize
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+        let image = renderer.image { ctx in
+            let cg = ctx.cgContext
+            cg.interpolationQuality = .none
+            cg.setShouldAntialias(false)
+            for (rowIndex, row) in rows.enumerated() {
+                for (colIndex, character) in row.enumerated() {
+                    guard character != "." else { continue }
+                    guard let uiColor = palette[character] else { continue }
+                    cg.setFillColor(uiColor.cgColor)
+                    let rect = CGRect(
+                        x: CGFloat(colIndex) * pixelSize,
+                        y: CGFloat(rowIndex) * pixelSize,
+                        width: pixelSize,
+                        height: pixelSize
+                    )
+                    cg.fill(rect)
+                }
+            }
+        }
+        return SKTexture(image: image)
+    }
 }

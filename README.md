@@ -22,13 +22,15 @@ OpenClawStarter/
 The user must never configure AI.
 
 ```text
-A glass egg appears.
+A pixel egg appears on a pastel platform.
 It wakes up.
 It reacts locally.
 It learns through speech.
 It remembers.
 Later, it floats, knocks, dreams, and shares.
 ```
+
+Visual direction is locked in `docs/ART_DIRECTION.md` — pastel pixel toy-world, chibi creatures, chunky pixel UI panels, dark purple/navy outlines, no realistic 3D, no cyberpunk, no chatbot or finance/crypto patterns.
 
 Infrastructure:
 
@@ -48,8 +50,10 @@ npm run dev
 The server runs at:
 
 ```text
-http://localhost:8787
+http://127.0.0.1:8989
 ```
+
+(8787/8788 are taken by other Python services on Alex's Mac. Override via `PORT` env var if needed.)
 
 Put `OPENROUTER_API_KEY` only on the server. Never ship it inside the iOS app.
 
@@ -73,7 +77,7 @@ ios/OpenClawApp/API/PetAPI.swift
 Simulator default:
 
 ```text
-http://127.0.0.1:8787
+http://127.0.0.1:8989
 ```
 
 ## Build order

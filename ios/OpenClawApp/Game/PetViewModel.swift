@@ -68,6 +68,11 @@ final class PetViewModel: ObservableObject {
         localReaction(animation: "claw_miss_sad_blink", text: "...", moodDelta: -0.01)
     }
 
+    func beginTeaching() {
+        isTeaching = true
+        localReaction(animation: "listen_glow", text: "?", moodDelta: 0.005, bondDelta: 0.002)
+    }
+
     func teach(text: String) async {
         let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
