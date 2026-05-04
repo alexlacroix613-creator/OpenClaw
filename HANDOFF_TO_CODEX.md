@@ -8,6 +8,101 @@
 
 ---
 
+## §-1. Current state — 2026-05-03 21:05 MDT
+
+**Branch:** `feat/local-dev-bringup` @ `3935ba4` (NOT pushed). 11 commits ahead of `01cd6dc` baseline.
+
+**Build:** `** BUILD SUCCEEDED **` for iPhone 17 / iOS 26.5 simulator (Xcode 26.5 Beta 3, Metal Toolchain present but not required since the .metal shader was deleted in the pixel pivot).
+
+**Backend:** `npm run dev` listens on `127.0.0.1:8989`. Local fallback verified — `OPENROUTER_FREE_MODEL=openrouter/free` is a placeholder slug, so every event currently flows through `localFallbackReaction` deterministically; iOS cannot tell the difference and the app remains playable with no key.
+
+**Latest iteration loop:** the user invoked `/loop 10x review improve debug make better` after the SpriteKit rip. Iters 1–7 shipped (counter at 8 in `/tmp/openclaw-loop-iter`); the loop was stopped on iter 8 by user request to write this handoff. The 7 commits are atomic and each named `feat(ios): iter N/10 — <subject>`.
+
+### What iters 1–7 added (since the KISS rewrite)
+
+| Iter | Commit  | What it shipped |
+|------|---------|-----------------|
+| 1    | `cb74bd5` | `Game/Haptics.swift` (light/medium/warning/success). Pet tap → light, eat → medium, miss → warning, hatch → success. Hatch flash overlay (white plus-lighter for 0.55s) + tap-pulse spring (1.0 → 1.10). |
+| 2    | `67b59f5` | First-launch ritual: `hasOnboarded` persisted in UserDefaults. `HintPanel` overlay shows a soft pulsing glow ring + a chunky pixel "tap the egg" panel above the egg. Self-dismisses on first tap. |
+| 3    | `c7fc26f` | `EatSparkle` view: 6 white pixel squares fan out from the pet anchor in a hex pattern over 0.6s on `resolveCapsule`. Drives off `eatSparkleUntil` timestamp on `PetViewModel`. |
+| 4    | `6888a80` | Sprite priority ladder in `PixelPetView`: `egg → eating → blinking → idle`. Pet swaps to existing `petHappy` sprite during the eat window. |
+| 5    | `3928fb3` | Stage progression on teach: hatchling → learner; learner → toddler @ bond > 0.35; toddler → buddy @ bond > 0.65; buddy → bff @ bond > 0.85. Each promotion fires the same `hatchFlashUntil` + `Haptics.hatch()` celebration. |
+| 6    | `965660f` | Second-stage hint "tap a snack to feed". `firstFeedDone` flag persisted in UserDefaults. `OnboardingHint` was generalized into `HintPanel(text:anchor:glowAnchor:)`. |
+| 7    | `3935ba4` | `PixelSprite.clawClosed` (prongs converge). `ClawSpriteView` swaps closed sprite during `.grabbing/.returning/.delivering`. Spring scale-punch 1.0 → 1.18 on grab. |
+
+### How the user-facing flow looks now
+
+1. Cold launch → pastel sky, drifting clouds, parallax trees, green floating platform with the pixel egg, six floating snack capsules, claw parked at the top with a dashed pixel cable hanging through. Status panel up top with bond/mood/full pills. Single TEACH button at the bottom.
+2. **Soft pulsing glow ring around the egg + "tap the egg" pixel panel** above it — only on first launch.
+3. Tap egg → success haptic → 0.55s white flash → stage transitions to hatchling → chibi pixel pet replaces the egg → onboarding hint dismisses.
+4. **"tap a snack to feed" hint** appears in the snack zone — only until first feed.
+5. Tap any snack → claw descends with a dashed-cable trail → closes on the snack with a scale-punch spring → returns up holding the snack → arcs over to the pet → snack disappears → pet swaps to `petHappy` sprite + 6-pixel hexagonal sparkle burst + medium haptic.
+6. Open TEACH → type a sound → "OK" → pet echoes "abc..." → if pet was hatchling, promotes to learner with the same flash+haptic celebration.
+
+### Files added in this session
+
+```
+docs/ART_DIRECTION.md                                 (full pixel-art spec)
+docs/GDD.md                                           (existing, light copy update)
+ios/OpenClawApp/Game/ClawWorldView.swift              (NEW — pure-SwiftUI claw world)
+ios/OpenClawApp/Game/Haptics.swift                    (NEW)
+ios/OpenClawApp/Game/Species.swift                    (NEW — 8 species + 4 rigs + traits)
+ios/OpenClawApp/Rendering/PixelPalette.swift          (NEW)
+ios/OpenClawApp/Rendering/PixelArt.swift              (NEW — sprite renderer + library)
+ios/OpenClawApp/Rendering/PixelHabitat.swift          (NEW — sky + clouds + trees)
+.backup/2026-05-03-pixel-pivot/AeroBackdrop.swift     (backup of removed file)
+.backup/2026-05-03-pixel-pivot/AeroGlassShader.metal  (backup of removed file)
+.backup/2026-05-03-spritekit-rip/ClawMachineScene.swift (backup of removed file)
+.backup/2026-05-03-spritekit-rip/ClawMachineView.swift  (backup of removed file)
+```
+
+### Files removed (in active path; backups kept)
+
+- `ios/OpenClawApp/Rendering/AeroBackdrop.swift`
+- `ios/OpenClawApp/Rendering/AeroGlassShader.metal`
+- `ios/OpenClawApp/Game/ClawMachineScene.swift`
+- `ios/OpenClawApp/Game/ClawMachineView.swift`
+
+### Known gaps to pick up next
+
+These are the natural next-iter targets if you continue the loop:
+
+1. **Pet sprite is the same for all 8 species.** `Species.swift` enumerates them all (orb/kit/cub/axo/pup/chick/slime/shade) but only the `orb` sprite (`PixelSprite.pet/petBlinking/petHappy`) is drawn. Author rig-specific sprites for the other 7. `Species.defaultBodyColor` is wired through; just need silhouettes per `RigFamily`.
+2. **No sound.** `ios/OpenClawApp/Audio/` directory not yet created. Bundling small chiptune WAVs for chirp/grab/miss/teach is the next polish wedge.
+3. **No "looking up" sprite when claw approaches.** Pet currently doesn't react to the claw descending. A `petCurious` frame swapped in during `case .descending` of `ClawState` is a cheap win.
+4. **`PixelTeachingPanel` modal still uses `runtime.cancelTeaching()` on background tap-out** — but the mic/speech path (`SpeechRecognizer.swift`) isn't wired into the panel yet. Mic permission flow not exercised on first run.
+5. **No teaching hint after first feed.** Tutorial chain is `egg-tap → snack-tap → ???`. A third `HintPanel` pointing at the TEACH button (gated on `firstFeedDone && !firstTeachDone`) would close the loop.
+6. **Backend stage sync is ignored.** `PetVisibleResponse` decodes only `mode/text/animation/emotion/statePatch`. Server's `nextStage` logic in `respondToPetEvent.ts` doesn't reach iOS. Currently mirrored locally in `PetViewModel.nextStage(after:)`. Either add stage to the response type or accept the mirror.
+7. **Snack respawn is unbounded.** Every grab spawns a fresh one of the same kind; over a long session there's no scarcity or variety throttle. Cosmetic only.
+
+### KISS interaction model (locked)
+
+The world has exactly three taps:
+- **Tap pet** → wake (egg) / interact (chibi).
+- **Tap floating snack** → claw fetches → drops on pet → reaction.
+- **Tap TEACH** → modal → type/speak → echo.
+
+DROP, FEED, slider — all permanently removed. Don't add them back. If you need a new world action, prefer a new tap target on something already on screen.
+
+### Where to resume
+
+```bash
+cd /Users/alexl/Projects/OpenClawStarter/server && npm run dev &
+xcrun simctl boot "iPhone 17"
+cd /Users/alexl/Projects/OpenClawStarter
+xcodegen generate    # only if you edit project.yml
+xcodebuild -project OpenClawStarter.xcodeproj -scheme OpenClawApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' \
+  -configuration Debug build CODE_SIGNING_ALLOWED=NO
+xcrun simctl uninstall booted com.openclaw.app  # to retest first-launch hints
+xcrun simctl install booted ~/Library/Developer/Xcode/DerivedData/OpenClawStarter-*/Build/Products/Debug-iphonesimulator/OpenClawApp.app
+xcrun simctl launch booted com.openclaw.app
+```
+
+To resume the iteration loop: `/loop 10x review improve debug make better` (counter is at 8 in `/tmp/openclaw-loop-iter`; the loop will pick up from iter 8 if you choose to count from there, or reset by writing `1` to that file).
+
+---
+
 ## 0a. Art direction (CURRENT — read this first)
 
 OpenClaw is a **pastel pixel toy-world** virtual pet game. Spec lives in `docs/ART_DIRECTION.md`. Summary:

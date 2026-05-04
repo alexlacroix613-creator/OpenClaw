@@ -1,89 +1,76 @@
 # OpenClaw — Resume Notes
 
-**Last session:** 2026-04-30 19:27 CDT
-**Branch:** `feat/local-dev-bringup` (2 commits, NOT pushed)
+**Last session:** 2026-05-03 21:05 MDT
+**Branch:** `feat/local-dev-bringup` @ `3935ba4` (11 commits, NOT pushed)
 **Working tree:** clean
 
-## What's already done
+## Read this first
 
-- Project extracted to `/Users/alexl/Projects/OpenClawStarter/`
-- Git initialized, baseline + feature commits in place
-- `server/` deps installed (`node_modules` populated, `package-lock.json` checked in)
-- `server/.env` created from `.env.example` with `PORT=8989`
-- Backend smoke-tested end-to-end against `/health`, `/v1/pet/bootstrap`, `/v1/pet/event`
-- Local fallback path verified to work without `OPENROUTER_API_KEY`
-- `xcodegen` installed via Homebrew (`/opt/homebrew/bin/xcodegen`, v2.45.4)
-- `OpenClawStarter.xcodeproj` generated successfully
-- `project.yml` rewritten to inline `info.properties` and `entitlements.properties` so
-  regeneration is idempotent (otherwise xcodegen strips `NSExtension` dicts and the
-  app group entitlement)
-- App `Info.plist` carries the magical permission copy, ATS exception for
-  `127.0.0.1`/`localhost`, audio background mode for PiP, and an
-  `OPENCLAW_API_BASE_URL` key
-- `PetAPI.swift` reads the base URL from Info.plist with `http://127.0.0.1:8989` as
-  the fallback
+Open `HANDOFF_TO_CODEX.md` § -1 for the full state. This file is a quick-resume index; the handoff has the truth.
 
-## Why port 8989 and not 8787
+## What ships in the build right now
 
-Two existing Python services on this Mac were already bound to `127.0.0.1:8787`
-and `127.0.0.1:8788` (some older OpenRouter proxy). Don't fight them; OpenClaw
-lives on `:8989` for local dev. If you ever want to change it, edit:
+Pure SwiftUI pastel pixel toy-world. Tap egg to hatch → tap snack to feed → tap TEACH to teach. Onboarding hint (egg) and feeding hint (snack) appear on first launch and dismiss on use. Pet has idle bob, blink, hatch flash, tap pulse, eating sprite swap, and a 6-pixel hex sparkle burst on feed. Stage progression hatchling → learner → toddler → buddy → bff gated on teach + bond. Claw closes with a scale-punch on grab.
 
-1. `server/.env` → `PORT=...`
-2. `project.yml` → `OPENCLAW_API_BASE_URL` value, then `xcodegen generate`
+## Hard rules (from CLAUDE.md and `docs/ART_DIRECTION.md`)
 
-## Hard blocker for iOS work
+- Never expose OpenRouter, model names, or "AI setup" UI to the user.
+- Never push to remote without Alex's explicit word.
+- Never add crypto, marketplace, or financialized rarity language.
+- Never edit generated `.plist` / `.entitlements` — edit `project.yml`, run `xcodegen generate`.
+- KISS interaction model is locked: three taps (pet / snack / TEACH). Don't reintroduce DROP / FEED / slider.
 
-Full Xcode app is **not installed** on this Mac as of last session — only Apple
-Command Line Tools. Alex left this session to update macOS + install Xcode from
-the App Store. Until that lands, `xcodebuild` and the iOS Simulator cannot run.
-
-After Xcode installs:
-
-```bash
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-cd /Users/alexl/Projects/OpenClawStarter
-xcodegen generate            # regenerates safely; project.yml owns the plists
-open OpenClawStarter.xcodeproj
-```
-
-Pick **iPhone 15 / iOS 17.0+** simulator. Build target: `OpenClawApp`.
-
-## Resume backend
+## Backend
 
 ```bash
 cd /Users/alexl/Projects/OpenClawStarter/server
-npm run dev
-# OpenClaw server listening on :8989
+npm run dev    # :8989
 ```
 
-## Known soft gaps (not blocking local play)
+Local fallback path is the default since `OPENROUTER_FREE_MODEL` is a placeholder slug. Set a real OpenRouter free-tier slug in `server/.env` if you want LLM behavior; iOS doesn't change.
 
-- `SpeechRecognizer.swift` does not call `AVAudioSession.sharedInstance().setCategory(.record, ...)` — mic input may be silent on a real device. Fine in simulator.
-- `inMemoryStore.ts` wipes pet state on every server restart. Defer to SQLite when persistence matters.
-- `PetPiPHost.swift` exists but is not wired into `RootView` yet — no UI surface to enter PiP from.
-- SnapKit handoff is documented in `docs/GDD.md` but no Swift code yet.
-- No app icon, no launch screen image, no real assets — bare scaffolds only.
+## iOS
 
-## Files I touched
+```bash
+xcrun simctl boot "iPhone 17"
+cd /Users/alexl/Projects/OpenClawStarter
+xcodebuild -project OpenClawStarter.xcodeproj -scheme OpenClawApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' \
+  -configuration Debug build CODE_SIGNING_ALLOWED=NO
+xcrun simctl install booted ~/Library/Developer/Xcode/DerivedData/OpenClawStarter-*/Build/Products/Debug-iphonesimulator/OpenClawApp.app
+xcrun simctl launch booted com.openclaw.app
+```
 
-- `.gitignore` (created)
-- `project.yml` (rewrote to inline plists/entitlements)
-- `server/.env` (created from example, PORT=8989)
-- `ios/OpenClawApp/Info.plist` (added permissions, ATS, background mode, base URL)
-- `ios/OpenClawApp/API/PetAPI.swift` (base URL now reads from Info.plist)
-- `ios/OpenClawBroadcastExtension/Info.plist` (regenerated by xcodegen with NSExtension dict)
-- `ios/OpenClawWidgetExtension/Info.plist` (regenerated by xcodegen with NSExtension dict)
-- `OpenClawStarter.xcodeproj/` (generated)
-- `.backup/OpenClawStarter.xcodeproj.20260430-191826/` (pre-rewrite snapshot)
+To re-test first-launch: `xcrun simctl uninstall booted com.openclaw.app` first.
 
-## Build order (from README)
+## Tutorial state lives in UserDefaults
 
-1. ✅ Local pet runtime + claw room — scaffolded, not yet visually verified
-2. ✅ Backend bootstrap + OpenRouter model router — running locally
-3. ⏳ Tabula-rasa teaching loop — endpoints exist, needs simulator verification
-4. ⏳ Memory bubbles
-5. ⏳ PiP companion window — file present, not wired
-6. ⏳ Live Activity / Dynamic Island — widget target builds, not yet started from app
-7. ⏳ Snapchat handoff
-8. ⏳ ReplayKit watch mode — broadcast extension scaffolded
+| Key                              | Meaning |
+|----------------------------------|---------|
+| `openclaw.petState.v1`           | Codable `PetState` (stage, mood/bond/hunger/energy, learnedTokens, etc.) |
+| `openclaw.installToken`          | Anonymous identity (UUID, never shown) |
+| `openclaw.hasOnboarded.v1`       | True after first egg tap. Hides the "tap the egg" hint. |
+| `openclaw.firstFeedDone.v1`      | True after first `resolveCapsule`. Hides the "tap a snack to feed" hint. |
+
+To reset onboarding flow without uninstalling, you can run on the simulator:
+```bash
+xcrun simctl spawn booted defaults delete com.openclaw.app
+```
+
+## Carry-forward queue (next iteration targets)
+
+1. **Per-rig sprites** — `Species.swift` enumerates 8 species but only `orb`'s pet/blink/happy sprites are drawn. Author cat/bunny, bear/koala, axolotl/dragon variants in `Rendering/PixelArt.swift`. `Species.defaultBodyColor` already wired.
+2. **Sound** — `ios/OpenClawApp/Audio/` does not exist. Bundle short chiptune WAVs for: wake chirp (E5), grab (A4+C5), miss (B4→A4→G4 descend), teach reinforcement (C5→E5→G5 ascend), stage transition (sparkle arpeggio). Wire through a `PetAudio` actor backed by `AVAudioPlayerNode`.
+3. **"Looking up" pet frame** when claw is descending — `case .descending` in `ClawState` should swap to a `petCurious` sprite for anticipation.
+4. **Third tutorial hint** — "tap TEACH" after first feed. Pattern: copy `firstFeedDone` → add `firstTeachDone`. Render `HintPanel` pointing at the TEACH button when `firstFeedDone && !firstTeachDone`.
+5. **Mic teaching path** — `Speech/SpeechRecognizer.swift` is wired with the AVAudioSession fix from the earlier session but not invoked from `PixelTeachingPanel`. Add a 🎤 button next to the text field that toggles `recognizer.start() / stop()`, pipe `recognizer.transcript` into `teachingText`.
+6. **Backend stage sync** — `PetVisibleResponse` only decodes `mode/text/animation/emotion/statePatch`. Either extend it with `stage` and apply server-side decisions, or formally embrace the iOS-side mirror in `PetViewModel.nextStage(after:)` and stop carrying server logic.
+7. **Snack scarcity / variety** — `Snack.spawnReplacement` always respawns the same kind. Pick a different kind and slightly throttle so the world feels less infinite.
+
+## Resume command for the iteration loop
+
+```
+/loop 10x review improve debug make better
+```
+
+Iter counter currently at `8` (in `/tmp/openclaw-loop-iter`). Reset with `echo 1 > /tmp/openclaw-loop-iter` if you want to start a fresh count of 10.
