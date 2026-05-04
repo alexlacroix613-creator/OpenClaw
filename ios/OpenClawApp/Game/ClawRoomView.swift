@@ -2,46 +2,47 @@ import SwiftUI
 
 struct ClawRoomView: View {
     @EnvironmentObject private var runtime: PetViewModel
-    @State private var clawX: Double = 0.5
     @State private var teachingText = ""
-    @StateObject private var sceneHolder = SceneHolder()
 
     var body: some View {
         GeometryReader { geo in
+            let petAnchor = CGPoint(x: geo.size.width / 2, y: geo.size.height * 0.66)
+
             ZStack {
                 PixelHabitat(pixelScale: 4)
+
+                ClawWorldView(runtime: runtime, petAnchor: petAnchor)
+                    .frame(width: geo.size.width, height: geo.size.height)
+
+                ZStack {
+                    PixelArt(sprite: .platform, scale: 6)
+                        .position(x: geo.size.width / 2, y: geo.size.height * 0.78)
+
+                    PixelPetView(state: runtime.petState)
+                        .position(x: petAnchor.x, y: petAnchor.y)
+                        .onTapGesture { runtime.handleTapPet() }
+                }
 
                 VStack(spacing: 0) {
                     PetStatusPanel(state: runtime.petState)
                         .padding(.horizontal, 12)
                         .padding(.top, 12)
-
                     Spacer()
                 }
 
                 VStack {
                     Spacer()
-                    ZStack {
-                        PixelArt(sprite: .platform, scale: 6)
-                            .frame(width: 320)
-
-                        PixelPetView(state: runtime.petState)
-                            .offset(y: -52)
-                            .onTapGesture { runtime.handleTapPet() }
+                    TeachButton {
+                        runtime.beginTeaching()
                     }
-                    .padding(.bottom, 220)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 24)
                 }
 
-                ClawMachineView(scene: sceneHolder.scene)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .allowsHitTesting(false)
-                    .ignoresSafeArea()
-
-                VStack {
-                    Spacer()
-                    PixelHud(clawX: $clawX, runtime: runtime, scene: sceneHolder.scene)
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 22)
+                if !runtime.petState.visibleText.isEmpty {
+                    PixelSpeechBubble(text: runtime.petState.visibleText)
+                        .position(x: petAnchor.x, y: petAnchor.y - 70)
+                        .transition(.opacity)
                 }
 
                 if runtime.isTeaching {
@@ -51,27 +52,13 @@ struct ClawRoomView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: runtime.isTeaching)
-        .onReceive(NotificationCenter.default.publisher(for: .clawGrabbedCapsule)) { event in
-            guard let type = event.object as? String else { return }
-            runtime.resolveCapsule(type: type)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .clawMissed)) { _ in
-            runtime.handleClawMiss()
-        }
-    }
-}
-
-private final class SceneHolder: ObservableObject {
-    let scene: ClawMachineScene
-    init() {
-        self.scene = ClawMachineScene(size: CGSize(width: 390, height: 760))
-        self.scene.scaleMode = .resizeFill
+        .animation(.easeInOut(duration: 0.20), value: runtime.petState.visibleText)
     }
 }
 
 private struct PixelPetView: View {
     let state: PetState
-    @State private var blinkPhase = false
+    @State private var blinkVisible = false
 
     var body: some View {
         let bodyColor = PixelPalette.Pet.pink
@@ -80,27 +67,24 @@ private struct PixelPetView: View {
             let bob = CGFloat(sin(t * 1.4)) * 3
             let breathing = 1.0 + sin(t * 1.0) * 0.025
 
-            ZStack {
-                let sprite: PixelSprite = state.stage == .egg
-                    ? .egg
-                    : (blinkPhase ? PixelSprite.petBlinking(bodyColor: bodyColor) : PixelSprite.pet(bodyColor: bodyColor))
+            let sprite: PixelSprite = state.stage == .egg
+                ? .egg
+                : (blinkVisible ? PixelSprite.petBlinking(bodyColor: bodyColor) : PixelSprite.pet(bodyColor: bodyColor))
 
-                PixelArt(sprite: sprite, scale: 5, dropShadow: true)
-                    .scaleEffect(breathing)
-                    .offset(y: bob)
-
-                if !state.visibleText.isEmpty {
-                    PixelSpeechBubble(text: state.visibleText)
-                        .offset(y: -64)
+            PixelArt(sprite: sprite, scale: 5, dropShadow: true)
+                .scaleEffect(breathing)
+                .offset(y: bob)
+                .onChange(of: blinkTriggerKey(for: t)) { _, _ in
+                    blinkVisible = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.13) {
+                        blinkVisible = false
+                    }
                 }
-            }
-            .onChange(of: Int(t.truncatingRemainder(dividingBy: 5)) == 0) { _, isBlink in
-                if isBlink && !blinkPhase {
-                    blinkPhase = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { blinkPhase = false }
-                }
-            }
         }
+    }
+
+    private func blinkTriggerKey(for time: TimeInterval) -> Int {
+        Int(time / 4.0)
     }
 }
 
@@ -169,62 +153,33 @@ struct PixelStatPill: View {
                 .foregroundStyle(PixelPalette.outline)
 
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 1)
+                Rectangle()
                     .fill(PixelPalette.Panel.accent.opacity(0.5))
                     .frame(width: 36, height: 6)
-                    .overlay(RoundedRectangle(cornerRadius: 1).stroke(PixelPalette.outline, lineWidth: 1))
-                RoundedRectangle(cornerRadius: 1)
+                    .overlay(Rectangle().stroke(PixelPalette.outline, lineWidth: 1))
+                Rectangle()
                     .fill(PixelPalette.Snack.apple)
                     .frame(width: max(2, CGFloat(value) * 36), height: 6)
-                    .overlay(RoundedRectangle(cornerRadius: 1).stroke(PixelPalette.outline, lineWidth: 1))
+                    .overlay(Rectangle().stroke(PixelPalette.outline, lineWidth: 1))
             }
         }
     }
 }
 
-private struct PixelHud: View {
-    @Binding var clawX: Double
-    let runtime: PetViewModel
-    let scene: ClawMachineScene
-
-    var body: some View {
-        VStack(spacing: 8) {
-            PixelTrack(value: $clawX) { newValue in
-                scene.moveClaw(to: CGFloat(newValue))
-            }
-
-            HStack(spacing: 10) {
-                PixelButton(title: "DROP", accentColor: PixelPalette.Snack.apple) {
-                    scene.dropClaw()
-                }
-                PixelButton(title: "TEACH", accentColor: PixelPalette.Snack.berry) {
-                    runtime.beginTeaching()
-                }
-                PixelButton(title: "FEED", accentColor: PixelPalette.Snack.honey) {
-                    runtime.resolveCapsule(type: "food")
-                }
-            }
-        }
-    }
-}
-
-private struct PixelButton: View {
-    let title: String
-    let accentColor: Color
+private struct TeachButton: View {
     let action: () -> Void
-    @State private var pressed = false
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 13, weight: .black, design: .rounded))
-                .tracking(1.2)
+            Text("TEACH")
+                .font(.system(size: 14, weight: .black, design: .rounded))
+                .tracking(1.6)
                 .foregroundStyle(PixelPalette.outline)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(accentColor.opacity(0.85))
+                        .fill(PixelPalette.Snack.honey.opacity(0.92))
                         .overlay(RoundedRectangle(cornerRadius: 4).stroke(PixelPalette.outline, lineWidth: 2))
                 )
         }
@@ -237,37 +192,6 @@ private struct PixelPressStyle: ButtonStyle {
         configuration.label
             .offset(x: configuration.isPressed ? 2 : 0, y: configuration.isPressed ? 2 : 0)
             .shadow(color: configuration.isPressed ? .clear : PixelPalette.outlineSoft, radius: 0, x: 2, y: 2)
-    }
-}
-
-private struct PixelTrack: View {
-    @Binding var value: Double
-    let onChange: (Double) -> Void
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(PixelPalette.Panel.fill)
-                    .overlay(RoundedRectangle(cornerRadius: 2).stroke(PixelPalette.outline, lineWidth: 2))
-                    .frame(height: 14)
-
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(PixelPalette.outline)
-                    .frame(width: 14, height: 22)
-                    .offset(x: max(0, min(geo.size.width - 14, CGFloat(value) * (geo.size.width - 14))), y: -4)
-            }
-            .frame(height: 22)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { drag in
-                        let normalized = max(0, min(1, Double(drag.location.x / geo.size.width)))
-                        value = normalized
-                        onChange(normalized)
-                    }
-            )
-        }
-        .frame(height: 22)
     }
 }
 
@@ -295,7 +219,7 @@ private struct PixelTeachingPanel: View {
                         )
                         .font(.system(size: 14, weight: .black, design: .rounded))
 
-                    Button("TEACH") {
+                    Button("OK") {
                         let text = teachingText
                         teachingText = ""
                         Task { await runtime.teach(text: text) }
@@ -303,11 +227,11 @@ private struct PixelTeachingPanel: View {
                     .font(.system(size: 12, weight: .black, design: .rounded))
                     .tracking(1.2)
                     .foregroundStyle(PixelPalette.outline)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(PixelPalette.Snack.honey.opacity(0.85))
+                            .fill(PixelPalette.Snack.honey.opacity(0.9))
                             .overlay(RoundedRectangle(cornerRadius: 2).stroke(PixelPalette.outline, lineWidth: 2))
                     )
                 }
@@ -323,5 +247,8 @@ private struct PixelTeachingPanel: View {
             .padding(.bottom, 28)
         }
         .background(Color.black.opacity(0.18).ignoresSafeArea())
+        .onTapGesture {
+            runtime.cancelTeaching()
+        }
     }
 }
