@@ -152,11 +152,11 @@ extension PixelSprite {
             ".oSSSSWWSSSSo.",
             "oSSSSWWWWSSSSo",
             "oSSSSSSSSSSSSo",
-            "oSSDSSSSSSSDSo",
-            "oSSSSSSSDSSSSo",
-            "oSSSDSSSSSSSSo",
-            "oSSSSSSDSSSSSo",
-            "oSSSSDSSSSDSSo",
+            "oSSdSSSSSSSdSo",
+            "oSSSSSSSdSSSSo",
+            "oSSSdSSSSSSSSo",
+            "oSSSSSSdSSSSSo",
+            "oSSSSdSSSSdSSo",
             ".oSSSSSSSSSSo.",
             "..ooSSSSSSoo..",
             "....oooooo...."
@@ -165,7 +165,7 @@ extension PixelSprite {
             "o": PixelPalette.outline,
             "S": PixelPalette.Pet.cream,
             "W": .white,
-            "D": PixelPalette.Snack.apple
+            "d": PixelPalette.Snack.honey
         ]
         return PixelSprite(rows: rows, palette: palette)
     }()

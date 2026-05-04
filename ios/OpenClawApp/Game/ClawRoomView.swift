@@ -58,7 +58,7 @@ struct ClawRoomView: View {
                 if !runtime.hasOnboarded && runtime.petState.stage == .egg {
                     HintPanel(
                         text: "tap the egg",
-                        anchor: CGPoint(x: petAnchor.x, y: petAnchor.y - 30),
+                        anchor: CGPoint(x: petAnchor.x, y: petAnchor.y - 60),
                         glowAnchor: petAnchor
                     )
                     .transition(.opacity)
@@ -69,7 +69,7 @@ struct ClawRoomView: View {
                     && runtime.petState.stage != .egg {
                     HintPanel(
                         text: "tap a snack to feed",
-                        anchor: CGPoint(x: geo.size.width / 2, y: geo.size.height * 0.50),
+                        anchor: CGPoint(x: geo.size.width / 2, y: geo.size.height * 0.55),
                         glowAnchor: nil
                     )
                     .transition(.opacity)
