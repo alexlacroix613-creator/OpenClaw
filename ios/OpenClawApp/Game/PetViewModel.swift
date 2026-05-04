@@ -103,7 +103,31 @@ final class PetViewModel: ObservableObject {
         guard !cleaned.isEmpty else { return }
         isTeaching = false
         localReaction(animation: "mouth_trying_sound", text: "\(cleaned.prefix(3))...", moodDelta: 0.02, bondDelta: 0.02)
+        promoteStageIfReady(after: "teach")
         await sendEvent(type: "teaching_text", text: cleaned)
+    }
+
+    private func promoteStageIfReady(after action: String) {
+        guard let next = nextStage(after: action) else { return }
+        petState.stage = next
+        hatchFlashUntil = Date().addingTimeInterval(0.55)
+        Haptics.hatch()
+        save()
+    }
+
+    private func nextStage(after action: String) -> PetStage? {
+        switch (petState.stage, action) {
+        case (.hatchling, "teach"):
+            return .learner
+        case (.learner, "teach") where petState.bond > 0.35:
+            return .toddler
+        case (.toddler, "teach") where petState.bond > 0.65:
+            return .buddy
+        case (.buddy, "teach") where petState.bond > 0.85:
+            return .bff
+        default:
+            return nil
+        }
     }
 
     private func sendEvent(type: String, text: String?) async {
