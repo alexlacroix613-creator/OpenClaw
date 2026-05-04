@@ -15,9 +15,11 @@ final class PetViewModel: ObservableObject {
     private let persistenceKey = "openclaw.petState.v1"
     private let onboardingKey = "openclaw.hasOnboarded.v1"
     private let firstFeedKey = "openclaw.firstFeedDone.v1"
+    private let firstTeachKey = "openclaw.firstTeachDone.v1"
 
     @Published var hasOnboarded: Bool
     @Published var firstFeedDone: Bool
+    @Published var firstTeachDone: Bool
 
     init() {
         if let data = UserDefaults.standard.data(forKey: persistenceKey),
@@ -28,6 +30,7 @@ final class PetViewModel: ObservableObject {
         }
         self.hasOnboarded = UserDefaults.standard.bool(forKey: onboardingKey)
         self.firstFeedDone = UserDefaults.standard.bool(forKey: firstFeedKey)
+        self.firstTeachDone = UserDefaults.standard.bool(forKey: firstTeachKey)
     }
 
     func markOnboarded() {
@@ -40,6 +43,12 @@ final class PetViewModel: ObservableObject {
         guard !firstFeedDone else { return }
         firstFeedDone = true
         UserDefaults.standard.set(true, forKey: firstFeedKey)
+    }
+
+    func markFirstTeach() {
+        guard !firstTeachDone else { return }
+        firstTeachDone = true
+        UserDefaults.standard.set(true, forKey: firstTeachKey)
     }
 
     func bootstrapIfNeeded() async {
@@ -112,6 +121,7 @@ final class PetViewModel: ObservableObject {
         let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
         isTeaching = false
+        markFirstTeach()
         localReaction(animation: "mouth_trying_sound", text: "\(cleaned.prefix(3))...", moodDelta: 0.02, bondDelta: 0.02)
         promoteStageIfReady(after: "teach")
         await sendEvent(type: "teaching_text", text: cleaned)

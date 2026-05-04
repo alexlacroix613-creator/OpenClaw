@@ -74,6 +74,18 @@ struct ClawRoomView: View {
                     .transition(.opacity)
                 }
 
+                if runtime.firstFeedDone
+                    && !runtime.firstTeachDone
+                    && runtime.petState.stage != .egg
+                    && !runtime.isTeaching {
+                    HintPanel(
+                        text: "tap TEACH to grow it",
+                        anchor: CGPoint(x: geo.size.width / 2, y: geo.size.height - 100),
+                        glowAnchor: nil
+                    )
+                    .transition(.opacity)
+                }
+
                 if runtime.isTeaching {
                     PixelTeachingPanel(teachingText: $teachingText, runtime: runtime)
                         .transition(.opacity)
@@ -84,6 +96,7 @@ struct ClawRoomView: View {
         .animation(.easeInOut(duration: 0.20), value: runtime.petState.visibleText)
         .animation(.easeInOut(duration: 0.30), value: runtime.hasOnboarded)
         .animation(.easeInOut(duration: 0.30), value: runtime.firstFeedDone)
+        .animation(.easeInOut(duration: 0.30), value: runtime.firstTeachDone)
     }
 }
 

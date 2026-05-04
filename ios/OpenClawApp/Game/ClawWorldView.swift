@@ -152,9 +152,11 @@ struct Snack: Identifiable, Equatable {
     }
 
     static func spawnReplacement(id: Int, type: Kind) -> Snack {
-        Snack(
+        let pool = Kind.allCases.filter { $0 != type }
+        let nextKind = pool.randomElement() ?? type
+        return Snack(
             id: id,
-            type: type,
+            type: nextKind,
             normalizedX: CGFloat.random(in: 0.10...0.90),
             normalizedY: CGFloat.random(in: 0.10...0.90),
             bobPhase: Double.random(in: 0...6.28)
