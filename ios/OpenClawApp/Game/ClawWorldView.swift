@@ -55,6 +55,7 @@ struct ClawWorldView: View {
         guard case .idle = clawState else { return }
         let target = snack.position(in: area, time: Date().timeIntervalSinceReferenceDate)
         clawState = .descending(targetId: snack.id, target: target)
+        runtime.petAlerted = true
         runScript(snack: snack, target: target, area: area)
     }
 
@@ -79,6 +80,7 @@ struct ClawWorldView: View {
                         nextRespawnId += 1
                         heldSnack = nil
                         clawState = .idle(x: target.x / max(area.right, 1))
+                        runtime.petAlerted = false
                     }
                 }
             }
@@ -178,8 +180,11 @@ private struct SnackSpriteView: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-            let pos = snack.position(in: area, time: timeline.date.timeIntervalSinceReferenceDate)
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let pos = snack.position(in: area, time: t)
+            let breathe = 1.0 + sin(t * 1.6 + snack.bobPhase) * 0.04
             PixelArt(sprite: snack.type.sprite, scale: 4, dropShadow: true)
+                .scaleEffect(breathe)
                 .position(x: pos.x, y: pos.y)
         }
     }

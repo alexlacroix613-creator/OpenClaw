@@ -10,6 +10,7 @@ final class PetViewModel: ObservableObject {
     @Published var hatchFlashUntil: Date?
     @Published var tapPulseToken: Int = 0
     @Published var eatSparkleUntil: Date?
+    @Published var petAlerted: Bool = false
 
     private let api = PetAPI()
     private let persistenceKey = "openclaw.petState.v1"

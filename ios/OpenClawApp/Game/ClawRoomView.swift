@@ -22,7 +22,8 @@ struct ClawRoomView: View {
                         state: runtime.petState,
                         hatchFlashUntil: runtime.hatchFlashUntil,
                         tapPulseToken: runtime.tapPulseToken,
-                        eatSparkleUntil: runtime.eatSparkleUntil
+                        eatSparkleUntil: runtime.eatSparkleUntil,
+                        alerted: runtime.petAlerted
                     )
                     .position(x: petAnchor.x, y: petAnchor.y)
                     .onTapGesture { runtime.handleTapPet() }
@@ -178,6 +179,7 @@ private struct PixelPetView: View {
     let hatchFlashUntil: Date?
     let tapPulseToken: Int
     let eatSparkleUntil: Date?
+    let alerted: Bool
 
     @State private var blinkVisible = false
     @State private var pulseScale: CGFloat = 1.0
@@ -189,6 +191,8 @@ private struct PixelPetView: View {
             let t = now.timeIntervalSinceReferenceDate
             let bob = CGFloat(sin(t * 1.4)) * 3
             let breathing = 1.0 + sin(t * 1.0) * 0.025
+            let alertScale: CGFloat = alerted ? 1.06 : 1.0
+            let alertLift: CGFloat = alerted ? -8 : 0
 
             let isEating = eatSparkleUntil.map { now < $0 } ?? false
             let sprite: PixelSprite = {
@@ -203,8 +207,9 @@ private struct PixelPetView: View {
 
             ZStack {
                 PixelArt(sprite: sprite, scale: 5, dropShadow: true)
-                    .scaleEffect(breathing * pulseScale)
-                    .offset(y: bob)
+                    .scaleEffect(breathing * pulseScale * alertScale)
+                    .offset(y: bob + alertLift)
+                    .animation(.spring(response: 0.32, dampingFraction: 0.7), value: alerted)
 
                 Rectangle()
                     .fill(Color.white)
@@ -349,55 +354,93 @@ private struct PixelTeachingPanel: View {
     let runtime: PetViewModel
 
     var body: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            VStack(spacing: 10) {
-                Text("TEACH IT A SOUND")
-                    .font(.system(size: 13, weight: .black, design: .rounded))
-                    .tracking(1.4)
-                    .foregroundStyle(PixelPalette.outline)
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture { runtime.cancelTeaching() }
 
-                HStack(spacing: 8) {
-                    TextField("say or type a sound", text: $teachingText)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(PixelPalette.Panel.fill)
-                                .overlay(RoundedRectangle(cornerRadius: 2).stroke(PixelPalette.outline, lineWidth: 2))
-                        )
-                        .font(.system(size: 14, weight: .black, design: .rounded))
-
-                    Button("OK") {
-                        let text = teachingText
-                        teachingText = ""
-                        Task { await runtime.teach(text: text) }
+            VStack(spacing: 12) {
+                Spacer()
+                VStack(spacing: 12) {
+                    HStack(alignment: .top) {
+                        Text("teach it a sound")
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .tracking(1.0)
+                            .foregroundStyle(PixelPalette.outline)
+                        Spacer()
+                        Button {
+                            runtime.cancelTeaching()
+                        } label: {
+                            Text("X")
+                                .font(.system(size: 14, weight: .black, design: .rounded))
+                                .tracking(0.5)
+                                .foregroundStyle(PixelPalette.outline)
+                                .frame(width: 28, height: 28)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(PixelPalette.Panel.accent)
+                                        .overlay(RoundedRectangle(cornerRadius: 2).stroke(PixelPalette.outline, lineWidth: 2))
+                                )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .font(.system(size: 12, weight: .black, design: .rounded))
-                    .tracking(1.2)
-                    .foregroundStyle(PixelPalette.outline)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(PixelPalette.Snack.honey.opacity(0.9))
-                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(PixelPalette.outline, lineWidth: 2))
-                    )
+
+                    Text("type any short sound. it will try to copy.")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(PixelPalette.outline.opacity(0.7))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    HStack(spacing: 8) {
+                        TextField("e.g. mi  ba  woo", text: $teachingText)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(PixelPalette.Panel.fill)
+                                    .overlay(RoundedRectangle(cornerRadius: 2).stroke(PixelPalette.outline, lineWidth: 2))
+                            )
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .submitLabel(.done)
+                            .onSubmit { sendTeach() }
+
+                        Button {
+                            sendTeach()
+                        } label: {
+                            Text("OK")
+                                .font(.system(size: 13, weight: .black, design: .rounded))
+                                .tracking(1.2)
+                                .foregroundStyle(PixelPalette.outline)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(teachingText.trimmingCharacters(in: .whitespaces).isEmpty
+                                              ? PixelPalette.Panel.accent.opacity(0.5)
+                                              : PixelPalette.Snack.honey)
+                                        .overlay(RoundedRectangle(cornerRadius: 2).stroke(PixelPalette.outline, lineWidth: 2))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(teachingText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
                 }
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(PixelPalette.Panel.fill)
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(PixelPalette.outline, lineWidth: 2))
+                )
+                .shadow(color: PixelPalette.outlineSoft, radius: 0, x: 2, y: 2)
+                .padding(.horizontal, 18)
+                .padding(.bottom, 28)
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(PixelPalette.Panel.fill)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(PixelPalette.outline, lineWidth: 2))
-            )
-            .shadow(color: PixelPalette.outlineSoft, radius: 0, x: 2, y: 2)
-            .padding(.horizontal, 18)
-            .padding(.bottom, 28)
         }
-        .background(Color.black.opacity(0.18).ignoresSafeArea())
-        .onTapGesture {
-            runtime.cancelTeaching()
-        }
+    }
+
+    private func sendTeach() {
+        let text = teachingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        teachingText = ""
+        Task { await runtime.teach(text: text) }
     }
 }
