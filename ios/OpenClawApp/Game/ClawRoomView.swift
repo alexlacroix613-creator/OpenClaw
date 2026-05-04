@@ -21,7 +21,8 @@ struct ClawRoomView: View {
                     PixelPetView(
                         state: runtime.petState,
                         hatchFlashUntil: runtime.hatchFlashUntil,
-                        tapPulseToken: runtime.tapPulseToken
+                        tapPulseToken: runtime.tapPulseToken,
+                        eatSparkleUntil: runtime.eatSparkleUntil
                     )
                     .position(x: petAnchor.x, y: petAnchor.y)
                     .onTapGesture { runtime.handleTapPet() }
@@ -144,6 +145,7 @@ private struct PixelPetView: View {
     let state: PetState
     let hatchFlashUntil: Date?
     let tapPulseToken: Int
+    let eatSparkleUntil: Date?
 
     @State private var blinkVisible = false
     @State private var pulseScale: CGFloat = 1.0
@@ -156,9 +158,13 @@ private struct PixelPetView: View {
             let bob = CGFloat(sin(t * 1.4)) * 3
             let breathing = 1.0 + sin(t * 1.0) * 0.025
 
-            let sprite: PixelSprite = state.stage == .egg
-                ? .egg
-                : (blinkVisible ? PixelSprite.petBlinking(bodyColor: bodyColor) : PixelSprite.pet(bodyColor: bodyColor))
+            let isEating = eatSparkleUntil.map { now < $0 } ?? false
+            let sprite: PixelSprite = {
+                if state.stage == .egg { return .egg }
+                if isEating { return PixelSprite.petHappy(bodyColor: bodyColor) }
+                if blinkVisible { return PixelSprite.petBlinking(bodyColor: bodyColor) }
+                return PixelSprite.pet(bodyColor: bodyColor)
+            }()
 
             let flashing = hatchFlashUntil.map { now < $0 } ?? false
             let flashAlpha: Double = flashing ? 0.85 : 0
